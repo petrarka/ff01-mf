@@ -1,0 +1,20 @@
+[
+  {
+    "file": "1-board.png",
+    "route": "#/",
+    "viewport": "1280x800",
+    "shows": "the live bounty board: 17 live bounties, each with its live pot, entry fee, entries and time left, plus closing-soon and ended filters"
+  },
+  {
+    "file": "2-bounty.png",
+    "route": "#/bounty/makefun-frontend-01",
+    "viewport": "1280x800",
+    "shows": "a bounty page: summary, live pot, entry fee, deadline, the live rewards table and the rules"
+  },
+  {
+    "file": "3-leaderboard.png",
+    "route": "#/bounty/makefun-frontend-01/leaderboard",
+    "viewport": "1280x800",
+    "shows": "the leaderboard: podium, ranks, judge win rates with intervals, validity and entry size"
+  }
+]

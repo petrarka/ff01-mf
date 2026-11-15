@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="A lean, read-only client for make.fun: live bounties, bounty pages, leaderboards and public profiles.">
+<title>make.fun · bounties</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<a class="skip" href="#view">Skip to content</a>
+
+<header class="site-head">
+  <div class="wrap head-in">
+    <a class="brand" href="#/" aria-label="make.fun bounties, home">
+      <span class="brand-mark" aria-hidden="true">m</span>
+      <span class="brand-name">make<span class="dot">.</span>fun</span>
+      <span class="brand-sub">bounties</span>
+    </a>
+
+    <nav class="nav" aria-label="Main">
+      <a href="#/" data-nav="board">Bounties</a>
+      <a href="#/closing" data-nav="closing">Closing soon</a>
+      <a href="#/leaderboard" data-nav="leaderboard">Leaderboards</a>
+      <a href="#/u" data-nav="profiles">People</a>
+    </nav>
+
+    <form class="find" id="find" role="search" autocomplete="off">
+      <label class="sr-only" for="q">Find a bounty or a person</label>
+      <input id="q" name="q" type="search" placeholder="Bounty or @person" spellcheck="false" autocapitalize="off">
+      <button type="submit" class="find-go">Go</button>
+    </form>
+  </div>
+</header>
+
+<main id="view" tabindex="-1">
+  <div class="wrap">
+    <p class="boot">Loading the board…</p>
+  </div>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap foot-in">
+    <p>An independent, read-only client for <a href="https://make.fun">make.fun</a>. No account, no writes — every number comes from the public API.</p>
+    <p class="cache-note" id="cache-note" aria-live="off"></p>
+  </div>
+</footer>
+
+<noscript>
+  <div class="wrap"><p class="note">This frontend needs JavaScript: it reads make.fun's public API in your browser. The bounties are also on <a href="https://make.fun">make.fun</a>.</p></div>
+</noscript>
+</body>
+</html>
