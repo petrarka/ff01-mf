@@ -2,7 +2,7 @@
 
 import { api } from '../api.js';
 import {
-  arrow, count, dateLabel, esc, money, plural, potNote, potOf, stateOf, statusPill, timeLeft,
+  arrow, count, dateLabel, esc, loading, money, plural, potNote, potOf, retryButton, stateOf, statusPill, timeLeft,
 } from '../ui.js';
 
 const PAGE = 24;
@@ -58,12 +58,12 @@ function sortItems(items, sort, now) {
   };
   if (sort === 'pot') out.sort((a, b) => potOf(b) - potOf(a));
   else if (sort === 'entries') out.sort((a, b) => Number(b.submissionCount || 0) - Number(a.submissionCount || 0));
-  else if (sort === 'newest') out.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
   else {
+    const deadline = (item) => Date.parse(item.deadline) || Infinity;
     out.sort((a, b) => {
       const ended = endedLast(a, b);
       if (ended) return ended;
-      return new Date(a.deadline || Infinity) - new Date(b.deadline || Infinity);
+      return deadline(a) - deadline(b);
     });
   }
   return out;
@@ -78,8 +78,11 @@ export default async function mount(root, params = {}, ctx = {}) {
     q: '',
     limit: PAGE,
     live: null,
+    liveLoading: true,
+    liveError: null,
     ended: null,
     endedLoading: false,
+    endedError: null,
   };
 
   root.innerHTML = `<div class="route">
@@ -100,18 +103,18 @@ export default async function mount(root, params = {}, ctx = {}) {
       </div>
       <span class="spacer"></span>
       <label class="sr-only" for="bq">Search bounties</label>
-      <input id="bq" type="search" placeholder="Filter by title, sponsor…" spellcheck="false">
+      <input id="bq" type="search" placeholder="Filter by title, sponsor…" spellcheck="false" autocomplete="off" aria-controls="rows">
       <label class="sr-only" for="bs">Sort bounties</label>
-      <select id="bs">
-        <option value="ending">Ending soon</option>
-        <option value="pot">Biggest pot</option>
-        <option value="newest">Newest</option>
+      <select id="bs" aria-controls="rows">
+        <option value="ending">Closing soon</option>
+        <option value="pot">Biggest reward</option>
         <option value="entries">Most entries</option>
       </select>
     </div>
     <p class="dim" id="stamp" style="margin:0 0 12px"></p>
     <h2 class="sr-only">Bounty list</h2>
-    <div class="rows" id="rows"><div class="empty">Loading live bounties…</div></div>
+    <p class="sr-only" id="board-result" role="status"></p>
+    <div class="rows" id="rows">${loading('Loading live bounties…')}</div>
     <div class="more" id="more"></div>
   </div>`;
 
@@ -162,7 +165,7 @@ export default async function mount(root, params = {}, ctx = {}) {
     const q = state.q.trim().toLowerCase();
     if (q) {
       items = items.filter((i) =>
-        [i.title, i.slug, i.category, i.sponsor && i.sponsor.name]
+        [i.title, i.sponsor?.name || 'make.fun']
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -173,6 +176,7 @@ export default async function mount(root, params = {}, ctx = {}) {
   }
 
   function paintStats() {
+    if (!state.live) return;
     const c = counts();
     const now = Date.now();
     const live = liveItems();
@@ -192,15 +196,24 @@ export default async function mount(root, params = {}, ctx = {}) {
   }
 
   function paintList() {
-    const items = current();
-    if (!state.live && !state.ended) {
-      rows.innerHTML = '<div class="empty">Loading live bounties…</div>';
-      more.innerHTML = '';
+    const needsEnded = state.filter === 'ended' || state.filter === 'all';
+    const busy = state.liveLoading || (needsEnded && state.endedLoading);
+    const error = state.liveError || (needsEnded && state.endedError);
+    rows.setAttribute('aria-busy', String(busy));
+    more.innerHTML = '';
+    $('#board-result').textContent = '';
+    if (busy) {
+      rows.innerHTML = loading(state.liveLoading ? 'Loading live bounties…' : 'Loading ended bounties…');
       return;
     }
+    if (error) {
+      rows.innerHTML = `<div class="fail" role="alert"><h2>${state.liveError ? 'The board did not load' : 'Ended bounties did not load'}</h2><p>${esc(error.message || error)}</p>${retryButton}</div>`;
+      return;
+    }
+    const items = current();
+    $('#board-result').textContent = `${count(items.length)} ${plural(items.length, 'bounty', 'bounties')} match.`;
     if (!items.length) {
-      rows.innerHTML = `<div class="empty">Nothing here${state.q ? ` for “${esc(state.q)}”` : ' yet'}. Try another filter or search.</div>`;
-      more.innerHTML = '';
+      rows.innerHTML = `<div class="empty">No bounties match${state.q.trim() ? ` “${esc(state.q.trim())}”` : ' this filter'}. Try another filter or search.</div>`;
       return;
     }
     const now = Date.now();
@@ -221,25 +234,36 @@ export default async function mount(root, params = {}, ctx = {}) {
     paintList();
   }
 
-  async function ensureEnded() {
+  async function ensureEnded(retry = false) {
     if (state.ended) {
       repaint();
       return;
     }
     if (state.endedLoading) return;
     state.endedLoading = true;
-    paintStats();
+    state.endedError = null;
+    repaint();
     try {
-      state.ended = await api.board('resolved');
-    } catch {
-      state.ended = { items: [] };
+      const data = await api.board('resolved', retry ? { fresh: 0 } : {});
+      if (signal?.aborted) return;
+      state.ended = data;
+    } catch (err) {
+      if (signal?.aborted) return;
+      state.endedError = err;
     } finally {
       state.endedLoading = false;
     }
-    repaint();
+    if (!signal?.aborted) repaint();
   }
 
   root.addEventListener('click', (event) => {
+    if (event.target.closest('[data-retry]')) {
+      const work = state.liveError ? loadLive(true) : ensureEnded(true);
+      work.then(() => {
+        if (!signal?.aborted) ($('[data-retry]') || $('#bq')).focus({ preventScroll: true });
+      });
+      return;
+    }
     const tab = event.target.closest('[data-filter]');
     if (!tab) return;
     const filter = tab.getAttribute('data-filter');
@@ -255,26 +279,45 @@ export default async function mount(root, params = {}, ctx = {}) {
     else repaint();
   }, { signal });
 
+  let searchTimer;
+  signal?.addEventListener('abort', () => clearTimeout(searchTimer), { once: true });
   root.addEventListener('input', (event) => {
     if (event.target.id !== 'bq') return;
-    state.q = event.target.value;
-    state.limit = PAGE;
-    paintList();
+    clearTimeout(searchTimer);
+    if (event.isComposing) return;
+    searchTimer = setTimeout(() => {
+      if (signal?.aborted) return;
+      state.q = event.target.value;
+      state.limit = PAGE;
+      paintList();
+    }, 180);
   }, { signal });
 
   root.addEventListener('change', (event) => {
     if (event.target.id !== 'bs') return;
     state.sort = event.target.value;
+    state.limit = PAGE;
     paintList();
   }, { signal });
 
-  try {
-    state.live = await api.board('open');
-    if (signal && signal.aborted) return;
-    if (state.filter === 'ended' || state.filter === 'all') await ensureEnded();
+  async function loadLive(retry = false) {
+    state.liveLoading = true;
+    state.liveError = null;
     repaint();
-  } catch (err) {
-    rows.innerHTML = `<div class="fail"><h2>The board did not load</h2><p>${esc(err.message || String(err))}</p><p>The public API is read-only and CORS-open; a hiccup is usually temporary.</p></div>`;
-    more.innerHTML = '';
+    try {
+      const data = await api.board('open', retry ? { fresh: 0 } : {});
+      if (signal?.aborted) return;
+      state.live = data;
+    } catch (err) {
+      if (signal?.aborted) return;
+      state.liveError = err;
+    } finally {
+      state.liveLoading = false;
+    }
+    if (signal?.aborted) return;
+    if (state.live && (state.filter === 'ended' || state.filter === 'all')) await ensureEnded();
+    repaint();
   }
+
+  await loadLive();
 }

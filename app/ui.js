@@ -9,6 +9,24 @@ export const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ESC
 
 export const arrow = '→';
 
+export const loading = (label = 'Loading…') =>
+  `<div class="empty" role="status"><span class="spinner" aria-hidden="true"></span>${esc(label)}</div>`;
+
+export const retryButton = '<button class="btn primary" type="button" data-retry>Retry</button>';
+
+export function onRetry(root, retry, signal) {
+  root.querySelector('[data-retry]')?.addEventListener('click', async () => {
+    if (signal?.aborted) return;
+    await retry();
+    if (signal?.aborted) return;
+    const target = root.querySelector('h1, h2, [role="status"]');
+    if (target) {
+      target.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+    }
+  }, { once: true, signal });
+}
+
 export function money(value) {
   if (value === null || value === undefined || value === '') return '—';
   const n = typeof value === 'number' ? value : Number(value);

@@ -2,7 +2,7 @@
 
 import { api } from '../api.js';
 import {
-  arrow, avatar, count, esc, kb, microUsd, pct, plural,
+  arrow, avatar, count, esc, kb, loading, microUsd, onRetry, pct, plural, retryButton,
 } from '../ui.js';
 
 const PAGE = 30;
@@ -46,7 +46,7 @@ function whoCell(entry) {
   return `<div class="who-cell">
     ${avatar(entry.image, 'sm')}
     <div class="t">
-      <b>${titleHtml}</b>
+      <b title="${esc(title)}">${titleHtml}</b>
       <span><a class="handle" href="#/u/${encodeURIComponent(entry.handle || '')}">${esc(entry.handle || 'unknown')}</a>${range}${flags.length ? ' ' + flags.join(' ') : ''}</span>
     </div>
   </div>`;
@@ -82,17 +82,19 @@ export default async function mount(root, params = {}, ctx = {}) {
 
   root.innerHTML = `<div class="route">
     <nav class="crumbs"><a href="#/">Bounties</a><span>/</span><a href="#/bounty/${encodeURIComponent(slug)}">${esc(slug)}</a><span>/</span><span>leaderboard</span></nav>
-    <div class="empty">Loading the leaderboard…</div>
+    ${loading('Loading the leaderboard…')}
   </div>`;
 
   let data;
   try {
-    data = await api.leaderboard(slug, view ? { view } : {});
+    data = await api.leaderboard(slug, view ? { view } : {}, ctx.retry ? { fresh: 0 } : {});
   } catch (err) {
+    if (signal?.aborted) return;
     root.innerHTML = `<div class="route"><nav class="crumbs"><a href="#/">Bounties</a><span>/</span><a href="#/bounty/${encodeURIComponent(slug)}">${esc(slug)}</a></nav>
-      <div class="fail"><h1 style="font-size:26px">No leaderboard yet</h1>
+      <div class="fail" role="alert"><h1 style="font-size:26px">Leaderboard did not load</h1>
       <p>${esc(err.message || err)}</p>
-      <p><a class="btn primary" href="#/bounty/${encodeURIComponent(slug)}">Back to the bounty</a></p></div></div>`;
+      <p>${retryButton} <a class="btn" href="#/bounty/${encodeURIComponent(slug)}">Back to the bounty</a></p></div></div>`;
+    onRetry(root, () => mount(root, params, { ...ctx, retry: true }), signal);
     return;
   }
   if (signal && signal.aborted) return;
@@ -147,7 +149,7 @@ export default async function mount(root, params = {}, ctx = {}) {
 
     ${
       entries.length
-        ? `<div class="table-wrap">
+        ? `<div class="table-wrap" tabindex="0" role="region" aria-label="Leaderboard entries">
       <table>
         <caption class="sr-only">Leaderboard for ${esc(title)}</caption>
         <thead><tr>
@@ -164,7 +166,7 @@ export default async function mount(root, params = {}, ctx = {}) {
       <span>${data.phase && data.phase.scores === 'live' ? 'Provisional while the dev phase runs' : 'Final standings'}</span>
     </div>
     <div class="more" id="lb-more"></div>`
-        : '<div class="empty">No ranked entries yet. As soon as the first entry is judged it appears here.</div>'
+        : '<div class="empty" role="status">No entries yet. Entries will appear here as they are submitted and judged.</div>'
     }
   </div>`;
 

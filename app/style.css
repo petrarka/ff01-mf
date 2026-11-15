@@ -236,6 +236,9 @@ h1, h2, h3 { font-weight: 680; }
 }
 .controls input[type="search"] { width: 190px; }
 .controls select { cursor: pointer; }
+.controls :focus-visible, .find input:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent);
+}
 
 .rows { display: flex; flex-direction: column; gap: 10px; }
 
@@ -278,6 +281,14 @@ h1, h2, h3 { font-weight: 680; }
   text-align: center; color: var(--muted); padding: 40px 20px;
   border: 1px dashed var(--line-2); border-radius: var(--radius); background: var(--panel);
 }
+.spinner {
+  display: inline-block; width: 1em; height: 1em; margin-right: 9px; vertical-align: -0.12em;
+  border: 2px solid var(--line-2); border-top-color: var(--accent); border-radius: 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .spinner { animation: spin 0.8s linear infinite; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------------------------------------------------------------- bounty */
 
@@ -290,6 +301,7 @@ h1, h2, h3 { font-weight: 680; }
   border-radius: var(--radius); overflow: hidden; margin-bottom: 22px;
 }
 .fact { background: var(--panel); padding: 13px 15px; }
+.fact > span { display: block; }
 .fact .k { font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--dim); }
 .fact .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
 .fact .v.accent { color: var(--accent); }
@@ -399,7 +411,7 @@ tfoot td { border-bottom: 0; font-weight: 700; border-top: 1px solid var(--line-
 .seg a[aria-current="page"] { color: var(--text); background: var(--panel-3); box-shadow: inset 0 0 0 1px var(--line-2); }
 
 .podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
-.podium .card { padding: 12px 14px; display: flex; gap: 11px; align-items: center; }
+.podium .card { margin: 0; padding: 12px 14px; display: flex; gap: 11px; align-items: center; }
 .podium .who { min-width: 0; }
 .podium .who b { display: block; font-size: 14px; font-weight: 640; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .podium .who span { font-size: 12px; color: var(--dim); }
@@ -412,12 +424,12 @@ tfoot td { border-bottom: 0; font-weight: 700; border-top: 1px solid var(--line-
 .table-wrap th, .table-wrap td { padding: 8px 13px; }
 .table-wrap tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.014); }
 
-.who-cell { display: flex; align-items: center; gap: 11px; min-width: 230px; }
+.who-cell { display: flex; align-items: center; gap: 11px; width: 300px; }
 .who-cell .t { min-width: 0; }
 .who-cell .t b { display: block; font-size: 14.5px; font-weight: 620; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .who-cell .t a { color: var(--text); }
 .who-cell .t a:hover { color: var(--accent); text-decoration: none; }
-.who-cell .t span { display: block; font-size: 12.5px; color: var(--dim); }
+.who-cell .t > span { display: block; font-size: 12.5px; color: var(--dim); }
 .who-cell .t .handle { color: var(--muted); }
 
 .lb-foot { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin-top: 14px; color: var(--dim); font-size: 13px; }

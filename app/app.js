@@ -112,8 +112,9 @@ function failed(host, err) {
     <h1 style="font-size:28px">This view did not load</h1>
     <p class="lede">${esc(err && err.message ? err.message : String(err))}</p>
     <p class="dim">The app reads make.fun's public API; a hiccup there is usually brief.</p>
-    <p><a class="btn primary" href="${esc(location.hash || '#/')}">Try again</a> <a class="btn" href="#/">Bounties</a></p>
+    <p><button class="btn primary" type="button" id="route-retry">Retry</button> <a class="btn" href="#/">Bounties</a></p>
   </div>`;
+  host.querySelector('#route-retry').addEventListener('click', render, { once: true });
 }
 
 // Escaping for the two strings this file writes itself.
@@ -159,6 +160,7 @@ async function render() {
 
   const host = document.createElement('div');
   host.className = 'wrap';
+  host.innerHTML = '<p class="boot" role="status"><span class="spinner" aria-hidden="true"></span>Loading…</p>';
   view.replaceChildren(host);
   view.setAttribute('aria-busy', 'true');
 
@@ -200,8 +202,8 @@ async function render() {
     if (my !== token) return;
     failed(host, err);
   } finally {
-    view.setAttribute('aria-busy', 'false');
     if (my === token) {
+      view.setAttribute('aria-busy', 'false');
       if (booted && lastPath !== path) window.scrollTo(0, 0);
       lastPath = path;
       booted = true;

@@ -194,28 +194,28 @@ const boardPath = (status) => `/competitions?status=${encodeURIComponent(status)
 
 export const api = {
   /** The board, one status at a time: 'open', 'closed' or 'resolved'. */
-  board(status = 'open') {
-    return getJSON(boardPath(status));
+  board(status = 'open', opts) {
+    return getJSON(boardPath(status), opts);
   },
 
   /** One bounty by slug: description, rules, rewards, dates, phases. */
-  competition(slug) {
-    return getJSON(`/competitions/${encodeURIComponent(slug)}`);
+  competition(slug, opts) {
+    return getJSON(`/competitions/${encodeURIComponent(slug)}`, opts);
   },
 
   /** A bounty's leaderboard. view: 'performance' | 'overall' | 'cost' | 'efficiency'; rows: 'all' | 'first'. */
-  leaderboard(slug, { view, phase, rows } = {}) {
+  leaderboard(slug, { view, phase, rows } = {}, opts) {
     const q = new URLSearchParams();
     if (view) q.set('view', view);
     if (phase) q.set('phase', phase);
     if (rows) q.set('rows', rows);
     const suffix = q.toString() ? `?${q}` : '';
-    return getJSON(`/competitions/${encodeURIComponent(slug)}/leaderboard${suffix}`);
+    return getJSON(`/competitions/${encodeURIComponent(slug)}/leaderboard${suffix}`, opts);
   },
 
   /** A public account profile. */
-  profile(handle) {
-    return getJSON(`/profiles/${encodeURIComponent(handle)}`);
+  profile(handle, opts) {
+    return getJSON(`/profiles/${encodeURIComponent(handle)}`, opts);
   },
 };
 

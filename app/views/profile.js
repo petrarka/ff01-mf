@@ -1,7 +1,7 @@
 // Public profiles: #/u (a directory of people on the live leaderboards) and #/u/<handle>.
 
 import { api } from '../api.js';
-import { avatar, count, esc, money, shortDate, timeLeft } from '../ui.js';
+import { avatar, count, esc, loading, money, onRetry, retryButton, shortDate, timeLeft } from '../ui.js';
 
 function stat(value, label) {
   return `<div class="stat"><span class="k">${esc(label)}</span><span class="v">${esc(value)}</span></div>`;
@@ -27,10 +27,11 @@ function solution(item) {
 
 function socials(p) {
   const links = [];
+  const wallet = typeof p.wallet === 'string' ? p.wallet : p.wallet?.address;
   if (p.github_login) links.push(`<a href="https://github.com/${encodeURIComponent(p.github_login)}" target="_blank" rel="noopener nofollow">GitHub</a>`);
   if (p.x) links.push(`<a href="https://x.com/${encodeURIComponent(String(p.x).replace(/^@/, ''))}" target="_blank" rel="noopener nofollow">X</a>`);
   if (p.discord) links.push(`<span class="chip">Discord · ${esc(p.discord)}</span>`);
-  if (p.wallet) links.push(`<span class="chip mono" title="${esc(p.wallet)}">${esc(p.wallet.slice(0, 4))}…${esc(p.wallet.slice(-4))}</span>`);
+  if (typeof wallet === 'string' && wallet) links.push(`<span class="chip mono" title="${esc(wallet)}">${esc(wallet.slice(0, 4))}…${esc(wallet.slice(-4))}</span>`);
   return links.length ? `<div class="socials">${links.join('')}</div>` : '';
 }
 
@@ -64,7 +65,7 @@ function profileView(p) {
       ${
         solutions.length
           ? `<ul class="solutions" style="list-style:none;padding:0;margin:0">${solutions.map(solution).join('')}</ul>`
-          : '<div class="empty">No public entries yet.</div>'
+          : '<div class="empty" role="status">No public entries yet.</div>'
       }
     </section>
   </div>`;
@@ -88,33 +89,38 @@ function directory(entries, slug) {
               </a>`,
             )
             .join('')}</div>`
-        : '<div class="empty">No ranked people yet.</div>'
+        : '<div class="empty" role="status">No ranked people yet.</div>'
     }
     <p class="dim" style="margin-top:14px">People shown are the ranked entrants of the live bounties, from make.fun\'s public leaderboards.</p>
   </div>`;
 }
 
 export default async function mount(root, params = {}, ctx = {}) {
-  const handle = params.handle ? decodeURIComponent(params.handle) : '';
+  const handle = params.handle || '';
   const signal = ctx.signal;
+  const opts = ctx.retry ? { fresh: 0 } : {};
 
   if (!handle) {
-    root.innerHTML = `<div class="route"><div class="empty">Loading people…</div></div>`;
+    root.innerHTML = `<div class="route">${loading('Loading people…')}</div>`;
     let entries = [];
     let slug = 'makefun-frontend-01';
     try {
       try {
-        const board = await api.board('open');
+        const board = await api.board('open', opts);
         const items = (board && board.items) || [];
         const preferred = items.find((i) => i.slug === slug);
         slug = (preferred || items.find((i) => i.status === 'open') || {}).slug || slug;
       } catch {
         /* fall back to the featured bounty */
       }
-      const lb = await api.leaderboard(slug, { rows: 'first' });
+      if (signal?.aborted) return;
+      const lb = await api.leaderboard(slug, { rows: 'first' }, opts);
       entries = ((lb && lb.entries) || []).filter((e) => e.handle && e.rank).slice(0, 18);
-    } catch {
-      entries = [];
+    } catch (err) {
+      if (signal?.aborted) return;
+      root.innerHTML = `<div class="route"><div class="fail" role="alert"><h1>People did not load</h1><p>${esc(err.message || err)}</p>${retryButton}</div></div>`;
+      onRetry(root, () => mount(root, params, { ...ctx, retry: true }), signal);
+      return;
     }
     if (signal && signal.aborted) return;
     root.innerHTML = directory(entries, slug);
@@ -123,22 +129,24 @@ export default async function mount(root, params = {}, ctx = {}) {
 
   root.innerHTML = `<div class="route">
     <nav class="crumbs"><a href="#/">Bounties</a><span>/</span><a href="#/u">People</a><span>/</span><span>${esc(handle)}</span></nav>
-    <div class="empty">Loading @${esc(handle)}…</div>
+    ${loading(`Loading @${handle}…`)}
   </div>`;
 
   let profile;
   try {
-    profile = await api.profile(handle);
+    profile = await api.profile(handle, opts);
   } catch (err) {
+    if (signal?.aborted) return;
     const missing = err && err.status === 404;
     root.innerHTML = `<div class="route">
       <nav class="crumbs"><a href="#/">Bounties</a><span>/</span><a href="#/u">People</a></nav>
-      <div class="fail">
+      <div class="fail" role="alert">
         <h1 style="font-size:26px">${missing ? 'No such person' : 'Profile did not load'}</h1>
         <p>${missing ? `There is no public make.fun account at <code>@${esc(handle)}</code> — or it has not entered anything yet.` : esc(err.message || String(err))}</p>
-        <p><a class="btn primary" href="#/u">Browse people</a> <a class="btn" href="#/">Bounties</a> <a class="btn" href="#/bounty/${encodeURIComponent(handle)}">Look for a bounty instead</a></p>
+        <p>${retryButton} <a class="btn" href="#/u">Browse people</a> <a class="btn" href="#/">Bounties</a> <a class="btn" href="#/bounty/${encodeURIComponent(handle)}">Look for a bounty instead</a></p>
       </div>
     </div>`;
+    onRetry(root, () => mount(root, params, { ...ctx, retry: true }), signal);
     return;
   }
 

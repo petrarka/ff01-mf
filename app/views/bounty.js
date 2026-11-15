@@ -2,8 +2,8 @@
 
 import { api } from '../api.js';
 import {
-  ago, arrow, avatar, count, dateLabel, esc, md, money, pct, plural, potNote, potOf,
-  shortDate, stateOf, statusPill, timeLeft,
+  ago, arrow, avatar, count, dateLabel, esc, loading, md, money, onRetry, pct, plural, potNote, potOf,
+  retryButton, shortDate, stateOf, statusPill, timeLeft,
 } from '../ui.js';
 
 function facts(item, now) {
@@ -78,7 +78,7 @@ function phases(list) {
 }
 
 function entriesList(list) {
-  if (!Array.isArray(list) || !list.length) return '';
+  if (!Array.isArray(list) || !list.length) return '<section class="section"><h2>Latest entries</h2><div class="empty" role="status">No recent entries to show.</div></section>';
   const items = list
     .slice(0, 8)
     .map(
@@ -100,17 +100,19 @@ export default async function mount(root, params = {}, ctx = {}) {
 
   root.innerHTML = `<div class="route">
     <nav class="crumbs"><a href="#/">Bounties</a><span>/</span><span>${esc(slug)}</span></nav>
-    <div class="empty">Loading ${esc(slug)}…</div>
+    ${loading(`Loading ${slug}…`)}
   </div>`;
 
   let item;
   try {
-    item = await api.competition(slug);
+    item = await api.competition(slug, ctx.retry ? { fresh: 0 } : {});
   } catch (err) {
+    if (signal?.aborted) return;
     root.innerHTML = `<div class="route"><nav class="crumbs"><a href="#/">Bounties</a><span>/</span><span>${esc(slug)}</span></nav>
-      <div class="fail"><h1 style="font-size:26px">Bounty not found</h1>
+      <div class="fail" role="alert"><h1 style="font-size:26px">${err.status === 404 ? 'Bounty not found' : 'Bounty did not load'}</h1>
       <p><code>${esc(slug)}</code> did not load (${esc(err.message || err)}). It may have been renamed, or the API is having a moment.</p>
-      <p><a class="btn primary" href="#/">Back to the board</a> <a class="btn" href="#/u/${encodeURIComponent(slug)}">Look for a person instead</a></p></div></div>`;
+      <p>${retryButton} <a class="btn" href="#/">Back to the board</a> <a class="btn" href="#/u/${encodeURIComponent(slug)}">Look for a person instead</a></p></div></div>`;
+    onRetry(root, () => mount(root, params, { ...ctx, retry: true }), signal);
     return;
   }
 
@@ -204,15 +206,26 @@ export default async function mount(root, params = {}, ctx = {}) {
     </div>
   </div>`;
 
-  // Top of the leaderboard, if the API has one, in a side card. Waited on briefly so a
-  // screenshot sees it, never long enough to hold the page up.
-  const lb = await Promise.race([
-    api.leaderboard(slug, { rows: 'first' }).catch(() => null),
-    new Promise((resolve) => setTimeout(() => resolve(null), 1500)),
-  ]);
-  if (lb && Array.isArray(lb.entries) && lb.entries.length) {
-    const card = document.createElement('div');
-    card.className = 'card';
+  const card = document.createElement('div');
+  card.className = 'card';
+  root.querySelector('aside').appendChild(card);
+
+  async function loadTopEntries(retry = false) {
+    card.innerHTML = `<h2 style="font-size:16px">Top entries</h2>${loading('Loading top entries…')}`;
+    let lb;
+    try {
+      lb = await api.leaderboard(slug, { rows: 'first' }, retry ? { fresh: 0 } : {});
+    } catch (err) {
+      if (signal?.aborted) return;
+      card.innerHTML = `<h2 style="font-size:16px">Top entries</h2><div class="fail" role="alert"><p>Top entries did not load. ${esc(err.message || err)}</p>${retryButton}</div>`;
+      onRetry(card, () => loadTopEntries(true), signal);
+      return;
+    }
+    if (signal?.aborted) return;
+    if (!Array.isArray(lb.entries) || !lb.entries.length) {
+      card.innerHTML = '<h2 style="font-size:16px">Top entries</h2><p class="dim" role="status">No entries yet.</p>';
+      return;
+    }
     card.innerHTML = `<h2 style="font-size:16px">Top entries</h2>
       <ul class="entries" style="list-style:none;padding:0;margin:0">
         ${lb.entries
@@ -228,7 +241,7 @@ export default async function mount(root, params = {}, ctx = {}) {
           .join('')}
       </ul>
       <p style="margin:12px 0 0"><a class="btn small" href="#/bounty/${encodeURIComponent(slug)}/leaderboard">All ${count(lb.entries.length)} ranked entries ${arrow}</a></p>`;
-    const aside = root.querySelector('aside');
-    if (aside) aside.appendChild(card);
   }
+
+  await loadTopEntries();
 }

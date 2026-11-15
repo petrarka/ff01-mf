@@ -3,7 +3,7 @@
     "file": "1-board.png",
     "route": "#/",
     "viewport": "1280x800",
-    "shows": "the live bounty board: 17 live bounties, each with its live pot, entry fee, entries and time left, plus closing-soon and ended filters"
+    "shows": "the live bounty board: bounties with live pot, entry fee, entries and time left, plus title/sponsor search, reward/deadline/entry sorting and status filters"
   },
   {
     "file": "2-bounty.png",
