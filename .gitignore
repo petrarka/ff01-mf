@@ -1,6 +1,0 @@
-out/
-node_modules/
-.DS_Store
-*.log
-opencode.json
-# static entry: app/ is the only build output
