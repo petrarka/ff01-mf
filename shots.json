@@ -1,0 +1,5 @@
+[
+  {"file":"1-board.png","route":"#/","viewport":{"width":1280,"height":1000}},
+  {"file":"2-bounty.jpg","route":"#/bounty/threejs-fps-01","viewport":{"width":1280,"height":1000}},
+  {"file":"3-leaderboard.png","route":"#/bounty/makefun-frontend-01/leaderboard","viewport":{"width":1280,"height":1000}}
+]

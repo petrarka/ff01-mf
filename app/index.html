@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111411">
+  <meta name="description" content="Fieldwork, a fast public window into make.fun. Explore live bounties, compare standings and follow the builders.">
+  <title>Fieldwork — make.fun</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#view">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="#/" aria-label="Fieldwork by make.fun, bounty board"><span class="brand-mark" aria-hidden="true">✳</span><strong>make.fun</strong><span class="brand-edition">FIELDWORK</span></a>
+    <nav aria-label="Main navigation">
+      <a href="#/" data-nav="board">Bounties</a>
+      <a href="#/bounty/makefun-frontend-01" data-nav="bounty" id="bounty-nav">Bounty brief</a>
+      <a href="#/bounty/makefun-frontend-01/leaderboard" data-nav="leaderboard" id="leaderboard-nav">Standings</a>
+      <a href="#/u/haski007" data-nav="profile" id="profile-nav">Builders</a>
+    </nav>
+    <span class="header-note"><i class="live-dot"></i> Public &amp; live</span>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <footer><span>FIELDWORK <span class="muted">/ A window into make.fun</span></span><span>Public data. Open competition. <span class="muted">Read only.</span></span></footer>
+  <noscript>This app needs JavaScript to read make.fun’s public bounty data.</noscript>
+</body>
+</html>

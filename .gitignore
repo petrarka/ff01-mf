@@ -1,0 +1,5 @@
+node_modules/
+/output/
+out/
+opencode.json
+.DS_Store
