@@ -49,6 +49,30 @@ test('concurrent readers share one request and failed requests remain retryable'
   assert.equal((await api.get('/api/retry')).data.recovered, true);
 });
 
+test('a browser-blocked conditional response falls back to a fresh full read', async () => {
+  reply = async () => new Response('{"version":1}', { headers: { ETag: '"old"' } });
+  await api.get('/api/cors-revalidation');
+  reply = async (_url, options) => {
+    if (options.headers['If-None-Match']) throw new TypeError('Failed to fetch');
+    return new Response('{"version":2}', { headers: { ETag: '"new"' } });
+  };
+  const refreshed = await api.get('/api/cors-revalidation');
+  assert.equal(refreshed.data.version, 2);
+  assert.equal(refreshed.stale, false);
+  assert.equal(calls.at(-2).options.headers['If-None-Match'], '"old"');
+  assert.equal(calls.at(-1).options.headers['If-None-Match'], undefined);
+});
+
+test('public scores use their actual units and avatars stay on the API origin', async () => {
+  const { score, avatarURL } = await import('../app/ui.js');
+  assert.equal(score(949192, '949192', { key: 'judge' }), '94.92%');
+  assert.equal(score(0, '0', { key: 'judge' }), '0.00%');
+  assert.equal(score(null, null, { key: 'judge' }), '—');
+  assert.equal(score('28100000', '28100000', { title: 'Net PnL (micro-USDC)' }), '$28.10');
+  assert.equal(avatarURL({ image: 'https://elsewhere.invalid/avatar.png' }), '');
+  assert.equal(avatarURL({ avatar: { url_small: '/api/avatars/test.webp' } }), 'https://make.fun/api/avatars/test.webp');
+});
+
 test('denied storage does not break live data, API paths stay restricted', async () => {
   globalThis.sessionStorage = { getItem() { throw new Error('Denied'); }, setItem() { throw new Error('Full'); } };
   reply = async () => new Response('{"ok":true}');

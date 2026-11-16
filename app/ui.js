@@ -3,6 +3,28 @@ export const number = value => value == null ? '—' : new Intl.NumberFormat('en
 export const money = value => value == null || value === '' || !Number.isFinite(Number(value)) ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: Number(value) % 1 ? 2 : 0 }).format(Number(value));
 export const bountyURL = slug => '#/bounty/' + encodeURIComponent(slug);
 export const profileURL = handle => '#/u/' + encodeURIComponent(handle);
+export function score(value, display, column = {}) {
+  column ||= {};
+  if (value == null && display == null) return '—';
+  const raw = value ?? display;
+  if ((column.source || '').endsWith('win_rate_micro') || column.key === 'judge') {
+    return Number.isFinite(Number(raw)) ? `${(Number(raw) / 10000).toFixed(2)}%` : '—';
+  }
+  if (column.title?.includes('micro-USDC')) return money(Number(raw) / 1000000);
+  if (column.title?.includes('lamports')) return `${number(Number(raw) / 1000000000)} SOL`;
+  return String(display ?? number(raw));
+}
+export function avatarURL(profile) {
+  const path = profile.avatar?.url_small || profile.avatar?.url || profile.image;
+  if (!path) return '';
+  try {
+    const url = new URL(path, 'https://make.fun');
+    return url.origin === 'https://make.fun' && url.pathname.startsWith('/api/') ? url.href : '';
+  } catch { return ''; }
+}
+export function pagination(page, pages, label) {
+  return `<nav class="pagination" aria-label="${esc(label)} pages"><button class="page-button" data-page="prev" aria-label="Previous page" ${page === 0 ? 'disabled' : ''}>←</button><span>Page <b>${page + 1}</b> / ${pages}</span><button class="page-button" data-page="next" aria-label="Next page" ${page + 1 >= pages ? 'disabled' : ''}>→</button></nav>`;
+}
 export function date(value, full = false) {
   if (!value || !Number.isFinite(new Date(value).getTime())) return 'Not announced';
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', ...(full ? { year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' } : {}) }).format(new Date(value)) + (full ? ' UTC' : '');

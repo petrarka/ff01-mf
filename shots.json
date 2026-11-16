@@ -1,5 +1,5 @@
 [
   { "file": "screenshots/1-board.png", "route": "#/", "viewport": { "width": 1280, "height": 800 } },
   { "file": "screenshots/2-bounty.png", "route": "#/bounty/threejs-fps-01", "viewport": { "width": 1280, "height": 800 } },
-  { "file": "screenshots/3-leaderboard.png", "route": "#/bounty/makefun-frontend-01/leaderboard", "viewport": { "width": 1280, "height": 800 } }
+  { "file": "screenshots/3-profile.png", "route": "#/u/icantcodefyi", "viewport": { "width": 1280, "height": 800 } }
 ]

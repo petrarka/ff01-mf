@@ -20,9 +20,14 @@ async function request(path) {
   const headers = { Accept: 'application/json' };
   if (previous?.etag) headers['If-None-Match'] = previous.etag;
   try {
-    const response = await fetch(origin + path, {
-      method: 'GET', headers, credentials: 'omit', cache: 'no-store',
+    const send = requestHeaders => fetch(origin + path, {
+      method: 'GET', headers: requestHeaders, credentials: 'omit', cache: 'no-store',
       signal: AbortSignal.timeout(25000)
+    });
+    // Some CDN 304 responses omit CORS headers. Retry a full read before using stale data.
+    const response = await send(headers).catch(error => {
+      if (previous?.etag && error instanceof TypeError) return send({ Accept: 'application/json' });
+      throw error;
     });
     if (response.status === 304 && previous) {
       previous.at = Date.now();
@@ -58,3 +63,4 @@ export const board = (cursor) => get('/api/competitions?activity=times&limit=100
 export const bounty = (slug) => get(`/api/competitions/${encodeURIComponent(slug)}?submissions=summary`);
 export const leaderboard = (slug, phase = '') => get(`/api/competitions/${encodeURIComponent(slug)}/leaderboard?rows=first&ties=runs${phase ? '&phase=' + encodeURIComponent(phase) : ''}`);
 export const profile = (handle) => get(`/api/profiles/${encodeURIComponent(handle)}`);
+export const ranking = (handle) => get(`/api/rankings/${encodeURIComponent(handle)}`);
